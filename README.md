@@ -25,7 +25,7 @@
 
 1. 将构建好的 JAR 文件放入 `.minecraft/mods` 文件夹
 2. 使用 Fabric 启动器启动 Minecraft
-3. 按 `Y` 键打开 ClickGUI
+3. 按 `rshift` 键打开 ClickGUI
 4. 使用 `.c` 命令前缀进行配置操作：
    - `.c save <name>` - 保存当前配置
    - `.c load <name>` - 加载已保存的配置
@@ -35,4 +35,6 @@
 ## 许可证
 
 本项目采用 GNU General Public License v3.0 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件。
+
+由ai总结此edopal
 
