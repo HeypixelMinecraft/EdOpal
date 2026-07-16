@@ -157,6 +157,9 @@ public final class ModulePanel extends OpalPanelComponent {
             }
         }
 
+        propertyProvider.setX(x);
+        propertyProvider.setY(y + 20);
+        propertyProvider.setWidth(width);
         propertyProvider.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -189,11 +192,17 @@ public final class ModulePanel extends OpalPanelComponent {
 
     @Override
     public void mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        propertyProvider.setX(x);
+        propertyProvider.setY(y + 20);
+        propertyProvider.setWidth(width);
         propertyProvider.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
     public void mouseReleased(double mouseX, double mouseY, int button) {
+        propertyProvider.setX(x);
+        propertyProvider.setY(y + 20);
+        propertyProvider.setWidth(width);
         propertyProvider.mouseReleased(mouseX, mouseY, button);
     }
 

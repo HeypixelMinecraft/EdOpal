@@ -100,6 +100,40 @@ public final class PropertyProvider extends OpalPanelComponent {
     }
 
     @Override
+    public void mouseClicked(double mouseX, double mouseY, int button) {
+        if (this.isClosed()) return;
+
+        float extraHeight = 0;
+        for (final PropertyPanel<?> propertyPanel : this.propertyPanelList) {
+            if (propertyPanel.isHidden()) continue;
+            propertyPanel.setX(x);
+            propertyPanel.setY(y + extraHeight);
+            propertyPanel.setWidth(width);
+
+            propertyPanel.mouseClicked(mouseX, mouseY, button);
+
+            extraHeight += propertyPanel.getHeight();
+        }
+    }
+
+    @Override
+    public void mouseReleased(double mouseX, double mouseY, int button) {
+        if (this.isClosed()) return;
+
+        float extraHeight = 0;
+        for (final PropertyPanel<?> propertyPanel : this.propertyPanelList) {
+            if (propertyPanel.isHidden()) continue;
+            propertyPanel.setX(x);
+            propertyPanel.setY(y + extraHeight);
+            propertyPanel.setWidth(width);
+
+            propertyPanel.mouseReleased(mouseX, mouseY, button);
+
+            extraHeight += propertyPanel.getHeight();
+        }
+    }
+
+    @Override
     public void keyPressed(KeyInput keyInput) {
         if (this.isClosed()) return;
         propertyPanelList.forEach(propertyPanel -> propertyPanel.keyPressed(keyInput));
@@ -116,32 +150,19 @@ public final class PropertyProvider extends OpalPanelComponent {
     }
 
     @Override
-    public void mouseClicked(double mouseX, double mouseY, int button) {
-        if (this.isClosed()) return;
-
-        for (final PropertyPanel<?> propertyPanel : this.propertyPanelList) {
-            if (propertyPanel.isHidden()) continue;
-            propertyPanel.mouseClicked(mouseX, mouseY, button);
-        }
-    }
-
-    @Override
     public void mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (this.isClosed()) return;
 
+        float extraHeight = 0;
         for (final PropertyPanel<?> propertyPanel : this.propertyPanelList) {
             if (propertyPanel.isHidden()) continue;
+            propertyPanel.setX(x);
+            propertyPanel.setY(y + extraHeight);
+            propertyPanel.setWidth(width);
+
             propertyPanel.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-        }
-    }
 
-    @Override
-    public void mouseReleased(double mouseX, double mouseY, int button) {
-        if (this.isClosed()) return;
-
-        for (final PropertyPanel<?> propertyPanel : this.propertyPanelList) {
-            if (propertyPanel.isHidden()) continue;
-            propertyPanel.mouseReleased(mouseX, mouseY, button);
+            extraHeight += propertyPanel.getHeight();
         }
     }
 }
