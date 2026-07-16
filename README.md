@@ -1,37 +1,37 @@
 # EdOpal
 
-A Fabric mod for Minecraft 1.21.10, featuring a powerful client with various utility modules.
+一个适用于 Minecraft 1.21.10 的 Fabric 模组，提供强大的客户端功能和各种实用模块。
 
-## Features
+## 功能特性
 
-- **ClickGUI** - Interactive graphical user interface for managing modules
-- **Config System** - Local config save/load functionality without cloud dependency
-- **Command System** - Custom commands for in-game interaction
-- **Visual Modules** - HUD elements, ESP, and other visual enhancements
-- **Movement Modules** - Player movement utilities
-- **Combat Modules** - PvP combat enhancements
+- **ClickGUI** - 交互式图形用户界面，用于管理模块
+- **配置系统** - 本地配置保存/加载功能，无需云端依赖
+- **命令系统** - 自定义命令，用于游戏内交互
+- **视觉模块** - HUD 元素、ESP 和其他视觉增强功能
+- **移动模块** - 玩家移动实用工具
+- **战斗模块** - PvP 战斗增强功能
 
-## Building
+## 构建
 
 ```bash
-# Build the project
+# 构建项目
 ./gradlew build
 
-# Build without running tests
+# 跳过测试构建
 ./gradlew build -x test
 ```
 
-## Usage
+## 使用方法
 
-1. Place the built JAR file in your `.minecraft/mods` folder
-2. Launch Minecraft with Fabric loader
-3. Press `Y` to open the ClickGUI
-4. Use `.c` command prefix for config operations:
-   - `.c save <name>` - Save current config
-   - `.c load <name>` - Load a saved config
-   - `.c list` - List available configs
-   - `.c delete <name>` - Delete a config
+1. 将构建好的 JAR 文件放入 `.minecraft/mods` 文件夹
+2. 使用 Fabric 启动器启动 Minecraft
+3. 按 `Y` 键打开 ClickGUI
+4. 使用 `.c` 命令前缀进行配置操作：
+   - `.c save <name>` - 保存当前配置
+   - `.c load <name>` - 加载已保存的配置
+   - `.c list` - 列出可用配置
+   - `.c delete <name>` - 删除配置
 
-## License
+## 许可证
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+本项目采用 GNU General Public License v3.0 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件。
