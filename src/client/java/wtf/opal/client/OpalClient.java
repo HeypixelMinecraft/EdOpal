@@ -30,6 +30,7 @@ import wtf.opal.client.feature.module.impl.combat.*;
 import wtf.opal.client.feature.module.impl.combat.criticals.CriticalsModule;
 import wtf.opal.client.feature.module.impl.combat.killaura.KillAuraModule;
 import wtf.opal.client.feature.module.impl.combat.velocity.VelocityModule;
+import wtf.opal.client.feature.module.impl.combat.velocity.Velocity2Module;
 import wtf.opal.client.feature.module.impl.movement.*;
 import wtf.opal.client.feature.module.impl.movement.clipper.ClipperModule;
 import wtf.opal.client.feature.module.impl.movement.flight.FlightModule;
@@ -92,6 +93,7 @@ public final class OpalClient {
                     new AttackDelayModule(),
                     new CriticalsModule(),
                     new VelocityModule(),
+                    new Velocity2Module(),
                     new AutoHeadModule(),
                     // Visual
                     new ClickGUIModule(),

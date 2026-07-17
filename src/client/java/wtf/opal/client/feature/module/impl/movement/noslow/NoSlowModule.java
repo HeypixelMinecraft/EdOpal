@@ -6,6 +6,7 @@ import wtf.opal.client.OpalClient;
 import wtf.opal.client.feature.helper.impl.player.slot.SlotHelper;
 import wtf.opal.client.feature.module.Module;
 import wtf.opal.client.feature.module.ModuleCategory;
+import wtf.opal.client.feature.module.impl.movement.noslow.impl.OldNCPNoSlow;
 import wtf.opal.client.feature.module.impl.movement.noslow.impl.UniversalNoSlow;
 import wtf.opal.client.feature.module.impl.movement.noslow.impl.VanillaNoSlow;
 import wtf.opal.client.feature.module.impl.movement.noslow.impl.WatchdogNoSlow;
@@ -28,7 +29,7 @@ public final class NoSlowModule extends Module {
 
     public NoSlowModule() {
         super("No Slow", "Removes vanilla slowdowns such as item usage.", ModuleCategory.MOVEMENT);
-        addModuleModes(mode, new VanillaNoSlow(this), new WatchdogNoSlow(this), new UniversalNoSlow(this));
+        addModuleModes(mode, new VanillaNoSlow(this), new WatchdogNoSlow(this), new UniversalNoSlow(this), new OldNCPNoSlow(this));
         addProperties(mode, allowSprinting);
     }
 
@@ -71,7 +72,8 @@ public final class NoSlowModule extends Module {
     public enum Mode {
         VANILLA("Vanilla"),
         WATCHDOG("Watchdog"),
-        UNIVERSAL("Universal");
+        UNIVERSAL("Universal"),
+        OLDNCP("OldNCP");
 
         private final String name;
 

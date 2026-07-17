@@ -15,10 +15,18 @@ import net.minecraft.util.Identifier;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.world.GameMode;
+import net.minecraft.block.ChestBlock;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import wtf.opal.client.OpalClient;
 import wtf.opal.client.feature.module.Module;
 import wtf.opal.client.feature.module.ModuleCategory;
+import wtf.opal.client.feature.module.impl.utility.inventory.manager.InventoryManagerModule;
 import wtf.opal.client.feature.module.property.impl.bool.BooleanProperty;
 import wtf.opal.client.feature.module.property.impl.number.BoundedNumberProperty;
+import wtf.opal.client.feature.module.repository.ModuleRepository;
 import wtf.opal.event.impl.game.PreGameTickEvent;
 import wtf.opal.event.subscriber.Subscribe;
 import wtf.opal.utility.misc.chat.ChatUtility;
@@ -51,15 +59,54 @@ public final class ChestStealerModule extends Module {
     public final BooleanProperty moreArmor = new BooleanProperty("More Armor", false);
     public final BooleanProperty moreSword = new BooleanProperty("More Sword", false);
     public final BooleanProperty highlight = new BooleanProperty("Highlight", true);
+    public final BooleanProperty autoSort = new BooleanProperty("Auto Sort", false);
 
     public ChestStealerModule() {
         super("Chest Stealer", "Steals items from chests.", ModuleCategory.UTILITY);
-        addProperties(minDelay, maxDelay, openDelay, autoClose, nameCheck, skipTrash, moreArmor, moreSword, highlight);
+        addProperties(minDelay, maxDelay, openDelay, autoClose, nameCheck, skipTrash, moreArmor, moreSword, highlight, autoSort);
     }
 
     private boolean isValidGameMode() {
         GameMode gameMode = mc.interactionManager.getCurrentGameMode();
         return gameMode == GameMode.SURVIVAL || gameMode == GameMode.ADVENTURE;
+    }
+
+    private boolean isValidChest(GenericContainerScreen container) {
+        String title = container.getTitle().getString().toLowerCase();
+        
+        if (!title.contains("chest")) {
+            return false;
+        }
+
+        if (!nameCheck.getValue()) {
+            return true;
+        }
+
+        if (title.equals("chest") || title.equals("large chest")) {
+            return true;
+        }
+
+        return checkChestBlockEntity();
+    }
+
+    private boolean checkChestBlockEntity() {
+        if (mc.player == null || mc.world == null) {
+            return false;
+        }
+
+        net.minecraft.util.hit.HitResult hitResult = mc.player.raycast(5.0, 0.0F, false);
+        if (hitResult.getType() != net.minecraft.util.hit.HitResult.Type.BLOCK) {
+            return false;
+        }
+
+        net.minecraft.util.hit.BlockHitResult blockHitResult = (net.minecraft.util.hit.BlockHitResult) hitResult;
+        BlockPos lookingAt = blockHitResult.getBlockPos();
+        BlockEntity blockEntity = mc.world.getBlockEntity(lookingAt);
+        if (blockEntity instanceof ChestBlockEntity) {
+            return true;
+        }
+
+        return false;
     }
 
     private boolean isMoreArmor(ItemStack itemStack) {
@@ -110,13 +157,13 @@ public final class ChestStealerModule extends Module {
             return;
         }
 
-        final GenericContainerScreenHandler screenHandler = container.getScreenHandler();
-        final Inventory chestInventory = screenHandler.getInventory();
-
-        if (!container.getTitle().getString().toLowerCase().contains("chest")) {
+        if (!isValidChest(container)) {
             this.inChest = false;
             return;
         }
+
+        final GenericContainerScreenHandler screenHandler = container.getScreenHandler();
+        final Inventory chestInventory = screenHandler.getInventory();
 
         if (!this.inChest) {
             this.inChest = true;
@@ -126,13 +173,6 @@ public final class ChestStealerModule extends Module {
 
         if (this.oDelay <= 0 && this.clickDelay <= 0) {
             if (this.isEnabled() && this.isValidGameMode()) {
-                if (this.nameCheck.getValue()) {
-                    String inventoryName = container.getTitle().getString();
-                    if (!inventoryName.equals("Chest") && !inventoryName.equals("Large Chest")) {
-                        return;
-                    }
-                }
-
                 if (mc.player.getInventory().getEmptySlot() == -1) {
                     if (!this.warnedFull) {
                         ChatUtility.error("Your inventory is full!");
@@ -258,6 +298,14 @@ public final class ChestStealerModule extends Module {
                         if (!this.skipTrash.getValue() || !InventoryUtility.isNotSpecialItem(stack) || isMoreArmor(stack) || isMoreSword(stack)) {
                             this.shiftClick(screenHandler, i);
                             return;
+                        }
+                    }
+
+                    if (this.autoSort.getValue()) {
+                        ModuleRepository moduleRepository = OpalClient.getInstance().getModuleRepository();
+                        InventoryManagerModule inventoryManager = moduleRepository.getModule(InventoryManagerModule.class);
+                        if (!inventoryManager.isEnabled()) {
+                            inventoryManager.setEnabled(true);
                         }
                     }
 

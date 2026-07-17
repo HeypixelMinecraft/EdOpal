@@ -96,12 +96,27 @@ public final class InventoryManagerModule extends Module {
         final Slot mostBlocks = getMostBlocks(playerHandler);
         final Slot preferredBlockSlot = screenHandler.getSlot(settings.getBlockSlot() + 35);
 
+        final Slot bestGapple = getBestGapple(playerHandler);
+        final Slot preferredGappleSlot = screenHandler.getSlot(settings.getGappleSlot() + 35);
+
+        final Slot bestGoldenGapple = getBestGoldenGapple(playerHandler);
+        final Slot preferredGoldenGappleSlot = screenHandler.getSlot(settings.getGoldenGappleSlot() + 35);
+
+        final Slot bestBow = getBestBow(playerHandler);
+        final Slot preferredBowSlot = screenHandler.getSlot(settings.getBowSlot() + 35);
+
+        final Slot mostPotions = getMostPotions(playerHandler);
+        final Slot preferredPotionSlot = screenHandler.getSlot(settings.getPotionSlot() + 35);
+
+        final Slot mostEnderPearls = getMostEnderPearls(playerHandler);
+        final Slot preferredEnderPearlSlot = screenHandler.getSlot(settings.getEnderPearlSlot() + 35);
+
         InventoryUtility.filterSlots(playerHandler, slot -> !slot.getStack().isEmpty(), true).forEach(validSlot -> {
             if (!canMove(settings.getDelay().longValue()) || InventoryUtility.isGoodItem(validSlot.getStack())) {
                 return;
             }
 
-            if (validSlot.getStack().getItem().getComponents().get(DataComponentTypes.EQUIPPABLE) != null) {
+            if (validSlot.getStack().getComponents().get(DataComponentTypes.EQUIPPABLE) != null) {
                 return;
             }
 
@@ -140,6 +155,36 @@ public final class InventoryManagerModule extends Module {
                 }
             }
 
+            if (stack.getItem() == Items.GOLDEN_APPLE && !stack.hasEnchantments() && settings.getSlots().getProperty("Gapple").getValue()) {
+                if (bestGapple != null && ItemStack.areItemsEqual(stack, bestGapple.getStack())) {
+                    return;
+                }
+            }
+
+            if (stack.getItem() == Items.ENCHANTED_GOLDEN_APPLE && settings.getSlots().getProperty("Golden Gapple").getValue()) {
+                if (bestGoldenGapple != null && ItemStack.areItemsEqual(stack, bestGoldenGapple.getStack())) {
+                    return;
+                }
+            }
+
+            if (stack.getItem() instanceof BowItem && settings.getSlots().getProperty("Bow").getValue()) {
+                if (bestBow != null && ItemStack.areItemsEqual(stack, bestBow.getStack())) {
+                    return;
+                }
+            }
+
+            if (stack.getItem() instanceof PotionItem && settings.getSlots().getProperty("Potions").getValue()) {
+                if (mostPotions != null && ItemStack.areItemsEqual(stack, mostPotions.getStack())) {
+                    return;
+                }
+            }
+
+            if (stack.getItem() == Items.ENDER_PEARL && settings.getSlots().getProperty("Ender Pearls").getValue()) {
+                if (mostEnderPearls != null && ItemStack.areItemsEqual(stack, mostEnderPearls.getStack())) {
+                    return;
+                }
+            }
+
             if (settings.getSlots().getProperty("Sword").getValue()) {
                 arrangeBestSword(screenHandler, preferredSwordSlot, bestSword);
             }
@@ -152,6 +197,21 @@ public final class InventoryManagerModule extends Module {
             if (settings.getSlots().getProperty("Blocks").getValue()) {
                 arrangeMostBlocks(screenHandler, preferredBlockSlot, mostBlocks);
             }
+            if (settings.getSlots().getProperty("Gapple").getValue()) {
+                arrangeBestGapple(screenHandler, preferredGappleSlot, bestGapple);
+            }
+            if (settings.getSlots().getProperty("Golden Gapple").getValue()) {
+                arrangeBestGoldenGapple(screenHandler, preferredGoldenGappleSlot, bestGoldenGapple);
+            }
+            if (settings.getSlots().getProperty("Bow").getValue()) {
+                arrangeBestBow(screenHandler, preferredBowSlot, bestBow);
+            }
+            if (settings.getSlots().getProperty("Potions").getValue()) {
+                arrangeMostPotions(screenHandler, preferredPotionSlot, mostPotions);
+            }
+            if (settings.getSlots().getProperty("Ender Pearls").getValue()) {
+                arrangeMostEnderPearls(screenHandler, preferredEnderPearlSlot, mostEnderPearls);
+            }
 
             if (validSlot.getIndex() == preferredSwordSlot.getIndex()) {
                 return;
@@ -160,6 +220,24 @@ public final class InventoryManagerModule extends Module {
                 return;
             }
             if (validSlot.getIndex() == preferredAxeSlot.getIndex()) {
+                return;
+            }
+            if (validSlot.getIndex() == preferredBlockSlot.getIndex()) {
+                return;
+            }
+            if (validSlot.getIndex() == preferredGappleSlot.getIndex()) {
+                return;
+            }
+            if (validSlot.getIndex() == preferredGoldenGappleSlot.getIndex()) {
+                return;
+            }
+            if (validSlot.getIndex() == preferredBowSlot.getIndex()) {
+                return;
+            }
+            if (validSlot.getIndex() == preferredPotionSlot.getIndex()) {
+                return;
+            }
+            if (validSlot.getIndex() == preferredEnderPearlSlot.getIndex()) {
                 return;
             }
             if (validSlot.getStack().getItem() instanceof BucketItem) {
@@ -243,7 +321,7 @@ public final class InventoryManagerModule extends Module {
     private Slot getMostBlocks(final ScreenHandler screenHandler) {
         return InventoryUtility.filterSlots(screenHandler, slot ->
                                 slot.getStack().getItem() instanceof BlockItem blockItem &&
-                                        slot.getStack().getCount() > 0 &&
+                                        slot.getStack().getCount() <= settings.getMaxBlocks() &&
                                         InventoryUtility.isGoodBlock(blockItem.getBlock())
                         , false)
                 .stream()
@@ -258,6 +336,103 @@ public final class InventoryManagerModule extends Module {
 
             if (mostBlockCount > preferredBlockValue) {
                 InventoryUtility.swap(screenHandler, mostBlockSlot.id, preferredBlockSlot.id - 36);
+                stopwatch.reset();
+            }
+        }
+    }
+
+    private Slot getBestGapple(final ScreenHandler screenHandler) {
+        return InventoryUtility.filterSlots(screenHandler, slot ->
+                                slot.getStack().getItem() == Items.GOLDEN_APPLE && !slot.getStack().hasEnchantments(), false)
+                .stream()
+                .max(Comparator.comparing(gappleSlot -> gappleSlot.getStack().getCount()))
+                .orElse(null);
+    }
+
+    private void arrangeBestGapple(final ScreenHandler screenHandler, final Slot preferredGappleSlot, final Slot bestGappleSlot) {
+        if (bestGappleSlot != null && bestGappleSlot.getIndex() != preferredGappleSlot.getIndex()) {
+            int bestGappleCount = bestGappleSlot.getStack().getCount();
+            int preferredGappleCount = preferredGappleSlot.getStack().getCount();
+
+            if (bestGappleCount > preferredGappleCount) {
+                InventoryUtility.swap(screenHandler, bestGappleSlot.id, preferredGappleSlot.id - 36);
+                stopwatch.reset();
+            }
+        }
+    }
+
+    private Slot getBestGoldenGapple(final ScreenHandler screenHandler) {
+        return InventoryUtility.filterSlots(screenHandler, slot ->
+                                slot.getStack().getItem() == Items.ENCHANTED_GOLDEN_APPLE, false)
+                .stream()
+                .max(Comparator.comparing(goldenGappleSlot -> goldenGappleSlot.getStack().getCount()))
+                .orElse(null);
+    }
+
+    private void arrangeBestGoldenGapple(final ScreenHandler screenHandler, final Slot preferredGoldenGappleSlot, final Slot bestGoldenGappleSlot) {
+        if (bestGoldenGappleSlot != null && bestGoldenGappleSlot.getIndex() != preferredGoldenGappleSlot.getIndex()) {
+            int bestGoldenGappleCount = bestGoldenGappleSlot.getStack().getCount();
+            int preferredGoldenGappleCount = preferredGoldenGappleSlot.getStack().getCount();
+
+            if (bestGoldenGappleCount > preferredGoldenGappleCount) {
+                InventoryUtility.swap(screenHandler, bestGoldenGappleSlot.id, preferredGoldenGappleSlot.id - 36);
+                stopwatch.reset();
+            }
+        }
+    }
+
+    private Slot getBestBow(final ScreenHandler screenHandler) {
+        return InventoryUtility.filterSlots(screenHandler, slot -> slot.getStack().getItem() instanceof BowItem, false)
+                .stream()
+                .max(Comparator.comparing(bowSlot -> InventoryUtility.getBowAttackBonus(bowSlot.getStack())))
+                .orElse(null);
+    }
+
+    private void arrangeBestBow(final ScreenHandler screenHandler, final Slot preferredBowSlot, final Slot bestBowSlot) {
+        if (bestBowSlot != null && bestBowSlot.getIndex() != preferredBowSlot.getIndex()) {
+            double bestBowValue = InventoryUtility.getBowAttackBonus(bestBowSlot.getStack());
+            double preferredBowValue = InventoryUtility.getBowAttackBonus(preferredBowSlot.getStack());
+
+            if (bestBowValue > preferredBowValue) {
+                InventoryUtility.swap(screenHandler, bestBowSlot.id, preferredBowSlot.id - 36);
+                stopwatch.reset();
+            }
+        }
+    }
+
+    private Slot getMostPotions(final ScreenHandler screenHandler) {
+        return InventoryUtility.filterSlots(screenHandler, slot -> slot.getStack().getItem() instanceof PotionItem, false)
+                .stream()
+                .max(Comparator.comparing(potionSlot -> potionSlot.getStack().getCount()))
+                .orElse(null);
+    }
+
+    private void arrangeMostPotions(final ScreenHandler screenHandler, final Slot preferredPotionSlot, final Slot mostPotionSlot) {
+        if (mostPotionSlot != null && mostPotionSlot.getIndex() != preferredPotionSlot.getIndex()) {
+            int mostPotionCount = mostPotionSlot.getStack().getCount();
+            int preferredPotionCount = preferredPotionSlot.getStack().getCount();
+
+            if (mostPotionCount > preferredPotionCount) {
+                InventoryUtility.swap(screenHandler, mostPotionSlot.id, preferredPotionSlot.id - 36);
+                stopwatch.reset();
+            }
+        }
+    }
+
+    private Slot getMostEnderPearls(final ScreenHandler screenHandler) {
+        return InventoryUtility.filterSlots(screenHandler, slot -> slot.getStack().getItem() == Items.ENDER_PEARL, false)
+                .stream()
+                .max(Comparator.comparing(enderPearlSlot -> enderPearlSlot.getStack().getCount()))
+                .orElse(null);
+    }
+
+    private void arrangeMostEnderPearls(final ScreenHandler screenHandler, final Slot preferredEnderPearlSlot, final Slot mostEnderPearlSlot) {
+        if (mostEnderPearlSlot != null && mostEnderPearlSlot.getIndex() != preferredEnderPearlSlot.getIndex()) {
+            int mostEnderPearlCount = mostEnderPearlSlot.getStack().getCount();
+            int preferredEnderPearlCount = preferredEnderPearlSlot.getStack().getCount();
+
+            if (mostEnderPearlCount > preferredEnderPearlCount) {
+                InventoryUtility.swap(screenHandler, mostEnderPearlSlot.id, preferredEnderPearlSlot.id - 36);
                 stopwatch.reset();
             }
         }
