@@ -1,33 +1,25 @@
 package wtf.opal.client.feature.module.impl.utility.inventory.manager;
 
-import net.hypixel.data.type.GameType;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ToolComponent;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.item.*;
-import net.minecraft.network.packet.s2c.play.ItemPickupAnimationS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import wtf.opal.client.OpalClient;
-import wtf.opal.client.feature.helper.impl.LocalDataWatch;
-import wtf.opal.client.feature.helper.impl.server.impl.HypixelServer;
 import wtf.opal.client.feature.module.Module;
 import wtf.opal.client.feature.module.ModuleCategory;
 import wtf.opal.client.feature.module.impl.combat.killaura.KillAuraModule;
-import wtf.opal.client.feature.module.impl.movement.InventoryMoveModule;
 import wtf.opal.client.feature.module.impl.world.scaffold.ScaffoldModule;
 import wtf.opal.client.feature.module.repository.ModuleRepository;
 import wtf.opal.event.impl.game.PreGameTickEvent;
 import wtf.opal.event.impl.game.packet.ReceivePacketEvent;
 import wtf.opal.event.subscriber.Subscribe;
-import wtf.opal.utility.misc.chat.ChatUtility;
 import wtf.opal.utility.misc.time.Stopwatch;
 import wtf.opal.utility.player.InventoryUtility;
-import wtf.opal.utility.player.PlayerUtility;
 
 import java.util.Comparator;
 
@@ -49,33 +41,11 @@ public final class InventoryManagerModule extends Module {
 
         final ModuleRepository moduleRepository = OpalClient.getInstance().getModuleRepository();
 
-        if (!(mc.currentScreen instanceof InventoryScreen) && !moduleRepository.getModule(InventoryMoveModule.class).isEnabled())
-            return;
-
         final KillAuraModule killAuraModule = moduleRepository.getModule(KillAuraModule.class);
         final ScaffoldModule scaffoldModule = moduleRepository.getModule(ScaffoldModule.class);
         if ((killAuraModule.isEnabled() && killAuraModule.getTargeting().isTargetSelected())
                 || scaffoldModule.isEnabled()) {
             return;
-        }
-
-        final boolean blitz;
-        if (LocalDataWatch.get().getKnownServerManager().getCurrentServer() instanceof HypixelServer) {
-            final HypixelServer.ModAPI.Location currentLocation = HypixelServer.ModAPI.get().getCurrentLocation();
-            if (currentLocation == null || currentLocation.isLobby()) {
-                return;
-            }
-
-            if (currentLocation.serverType() == GameType.SURVIVAL_GAMES) {
-                blitz = false;
-            } else {
-                blitz = false;
-                if (currentLocation.serverType() != GameType.SKYWARS) {
-                    return;
-                }
-            }
-        } else {
-            blitz = false;
         }
 
         final ScreenHandler screenHandler = mc.player.currentScreenHandler;
