@@ -67,7 +67,7 @@ public final class BindCommand extends Command {
                                     final String bind = context.getArgument("bind", String.class);
                                     final String bindName = bind.toUpperCase();
 
-                                    if (bindName.equals("CLEAR")) {
+                                    if (bindName.equals("CLEAR") || bindName.equals("NONE")) {
                                         BIND_REPOSITORY.getBindingService().clearBindings(module);
 
                                         ChatUtility.print("Binds for §l" + module.getName() + "§7 have been cleared!");
@@ -101,7 +101,7 @@ public final class BindCommand extends Command {
 
                                     final Config tempConfigObj = new Config(configName);
 
-                                    if (bindName.equals("CLEAR")) {
+                                    if (bindName.equals("CLEAR") || bindName.equals("NONE")) {
                                         final List<Config> configsToClear = BIND_REPOSITORY.getBindingService().getBindingMap().values().stream()
                                                 .filter(bindable -> bindable instanceof Config c && c.getName().equalsIgnoreCase(configName))
                                                 .map(Config.class::cast)

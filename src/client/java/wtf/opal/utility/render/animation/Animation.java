@@ -1,12 +1,10 @@
 package wtf.opal.utility.render.animation;
 
 public final class Animation {
-
     private final Easing easing;
     private long duration;
     private long millis;
     private long startTime;
-
     private float startValue;
     private float destinationValue;
     private float value;
@@ -32,6 +30,7 @@ public final class Animation {
         }
 
         float result = this.easing.getFunction().apply(this.getProgress());
+
         if (this.duration == 0L) {
             this.value = destinationValue;
         } else if (this.value > destinationValue) {

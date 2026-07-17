@@ -112,7 +112,9 @@ public abstract class HeldItemRendererMixin {
     private void applySwordBlockingTransformation(AbstractClientPlayerEntity player, float tickProgress, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, OrderedRenderCommandQueue orderedRenderCommandQueue, int light, CallbackInfo ci) {
         final AnimationsModule animationsModule = OpalClient.getInstance().getModuleRepository().getModule(AnimationsModule.class);
 
-        if (animationsModule.isEnabled() && animationsModule.isSwordBlocking() && (BlockUtility.isForceBlockUseState(player) || BlockUtility.isBlockUseState(player) || BlockUtility.isNoSlowBlockingState())) {
+        if (!animationsModule.isEnabled() || !animationsModule.isSwordBlocking()) return;
+
+        if (BlockUtility.isForceBlockUseState(player) || BlockUtility.isBlockUseState(player) || BlockUtility.isNoSlowBlockingState()) {
             animationsModule.applyTransformations(matrices, swingProgress);
         }
     }
@@ -134,9 +136,14 @@ public abstract class HeldItemRendererMixin {
     )
     private Item cancelBlockTransformation(ItemStack instance, @Local(argsOnly = true) MatrixStack matrices) {
         final AnimationsModule animationsModule = OpalClient.getInstance().getModuleRepository().getModule(AnimationsModule.class);
-        if (animationsModule.isEnabled() && animationsModule.isSwordBlocking() && instance.isIn(ItemTags.SWORDS)) {
+        if (!animationsModule.isEnabled() || !animationsModule.isSwordBlocking()) {
+            return instance.getItem();
+        }
+
+        if (instance.isIn(ItemTags.SWORDS)) {
             return Items.SHIELD;
         }
+
         return instance.getItem();
     }
 

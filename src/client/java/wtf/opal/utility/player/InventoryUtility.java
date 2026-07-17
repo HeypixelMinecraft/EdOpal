@@ -2,17 +2,32 @@ package wtf.opal.utility.player;
 
 import net.minecraft.block.*;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.EquippableComponent;
 import net.minecraft.component.type.ToolComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.*;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.item.AxeItem;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.BowItem;
+import net.minecraft.item.EnderPearlItem;
+import net.minecraft.item.FireChargeItem;
+import net.minecraft.item.FishingRodItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.PotionItem;
+import net.minecraft.item.ShieldItem;
+import net.minecraft.item.ShovelItem;
+import net.minecraft.item.ArrowItem;
 import net.minecraft.registry.*;
 import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.world.EmptyBlockView;
 
 import java.util.Collections;
@@ -144,6 +159,149 @@ public final class InventoryUtility {
 
     public static void swap(final ScreenHandler screenHandler, final int originalSlot, final int newSlot) {
         mc.interactionManager.clickSlot(screenHandler.syncId, originalSlot, newSlot, SlotActionType.SWAP, mc.player);
+    }
+
+    public static boolean canFit(final Inventory inventory, final ItemStack stack) {
+        if (stack.isEmpty()) {
+            return true;
+        }
+
+        for (int i = 0; i < inventory.size(); i++) {
+            final ItemStack slotStack = inventory.getStack(i);
+            if (slotStack.isEmpty()) {
+                return true;
+            }
+            if (ItemStack.areItemsEqual(slotStack, stack) && slotStack.getCount() < slotStack.getMaxCount()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static double getAttackBonus(final ItemStack stack) {
+        if (!stack.isIn(ItemTags.SWORDS)) {
+            return 0.0;
+        }
+
+        double damage = PlayerUtility.getStackAttackDamage(stack);
+        final int sharpnessLevel = calculateEnchantmentLevel(stack, Enchantments.SHARPNESS);
+        damage += sharpnessLevel * 1.25;
+
+        return damage;
+    }
+
+    public static double getArmorProtection(final ItemStack stack) {
+        if (!isArmor(stack)) {
+            return 0.0;
+        }
+
+        double protection = PlayerUtility.getArmorProtection(stack);
+        final int protectionLevel = calculateEnchantmentLevel(stack, Enchantments.PROTECTION);
+        protection += protectionLevel * 1.0;
+
+        return protection;
+    }
+
+    public static float getToolEfficiency(final ItemStack stack) {
+        final ToolComponent toolComponent = stack.get(DataComponentTypes.TOOL);
+        if (toolComponent == null) {
+            return 1.0F;
+        }
+
+        float efficiency = toolComponent.damagePerBlock();
+        final int efficiencyLevel = calculateEnchantmentLevel(stack, Enchantments.EFFICIENCY);
+        if (efficiencyLevel > 0) {
+            efficiency += (efficiencyLevel * efficiencyLevel + 1);
+        }
+
+        return efficiency;
+    }
+
+    public static double getBowAttackBonus(final ItemStack stack) {
+        if (!(stack.getItem() instanceof BowItem)) {
+            return 0.0;
+        }
+
+        double damage = 2.0;
+        final int powerLevel = calculateEnchantmentLevel(stack, Enchantments.POWER);
+        damage += powerLevel * 0.5 + (powerLevel * powerLevel) * 0.125;
+
+        return damage;
+    }
+
+    public static int findSwordInInventorySlot(final int startSlot, final boolean includeHotbar) {
+        final int endSlot = includeHotbar ? 36 : 27;
+        for (int i = startSlot; i < endSlot; i++) {
+            final ItemStack stack = mc.player.getInventory().getStack(i);
+            if (!stack.isEmpty() && stack.isIn(ItemTags.SWORDS)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public static int findArmorInventorySlot(final int armorType, final boolean includeHotbar) {
+        final EquipmentSlot slot;
+        switch (armorType) {
+            case 0 -> slot = EquipmentSlot.HEAD;
+            case 1 -> slot = EquipmentSlot.CHEST;
+            case 2 -> slot = EquipmentSlot.LEGS;
+            case 3 -> slot = EquipmentSlot.FEET;
+            default -> slot = EquipmentSlot.HEAD;
+        }
+
+        final int endSlot = includeHotbar ? 36 : 27;
+        for (int i = 0; i < endSlot; i++) {
+            final ItemStack stack = mc.player.getInventory().getStack(i);
+            if (!stack.isEmpty()) {
+                final EquippableComponent equip = stack.getComponents().get(DataComponentTypes.EQUIPPABLE);
+                if (equip != null && equip.slot() == slot) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public static int findBowInventorySlot(final int startSlot, final boolean includeHotbar) {
+        final int endSlot = includeHotbar ? 36 : 27;
+        for (int i = startSlot; i < endSlot; i++) {
+            final ItemStack stack = mc.player.getInventory().getStack(i);
+            if (!stack.isEmpty() && stack.getItem() instanceof BowItem) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public static int findInventorySlot(final String type, final int startSlot, final boolean includeHotbar) {
+        final int endSlot = includeHotbar ? 36 : 27;
+        for (int i = startSlot; i < endSlot; i++) {
+            final ItemStack stack = mc.player.getInventory().getStack(i);
+            if (!stack.isEmpty()) {
+                final Item item = stack.getItem();
+                switch (type.toLowerCase()) {
+                    case "pickaxe" -> {
+                        if (stack.isIn(ItemTags.PICKAXES)) return i;
+                    }
+                    case "shovel" -> {
+                        if (item instanceof ShovelItem) return i;
+                    }
+                    case "axe" -> {
+                        if (item instanceof AxeItem) return i;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    public static boolean isNotSpecialItem(final ItemStack stack) {
+        final Item item = stack.getItem();
+        return !(item instanceof EnderPearlItem || item instanceof PotionItem || item instanceof ShieldItem
+                || item instanceof FireChargeItem || item instanceof ArrowItem || item instanceof BowItem
+                || item instanceof FishingRodItem || item.getComponents().contains(DataComponentTypes.FOOD));
     }
 
     public static int calculateEnchantmentLevel(final ItemStack itemStack, final RegistryKey<Enchantment> enchantment) {

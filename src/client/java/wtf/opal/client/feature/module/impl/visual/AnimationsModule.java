@@ -3,6 +3,7 @@ package wtf.opal.client.feature.module.impl.visual;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
+import wtf.opal.client.Constants;
 import wtf.opal.client.feature.module.Module;
 import wtf.opal.client.feature.module.ModuleCategory;
 import wtf.opal.client.feature.module.property.impl.GroupProperty;
@@ -69,7 +70,26 @@ public final class AnimationsModule extends Module {
     }
 
     public boolean isSwordBlocking() {
-        return swordBlocking.getValue();
+        if (!swordBlocking.getValue()) return false;
+
+        if (Constants.mc.isInSingleplayer()) return false;
+        if (Constants.mc.getNetworkHandler() == null) return false;
+
+        return true;
+    }
+
+    private boolean isServerVersion1_8() {
+        if (Constants.mc.getNetworkHandler() == null) return false;
+        final String brand = Constants.mc.getNetworkHandler().getBrand();
+        if (brand == null) return false;
+        return brand.contains("1.8") || brand.contains("Spigot") || brand.contains("CraftBukkit") || brand.contains("Paper");
+    }
+
+    private boolean isServerVersion1_9Plus() {
+        if (Constants.mc.getNetworkHandler() == null) return false;
+        final String brand = Constants.mc.getNetworkHandler().getBrand();
+        if (brand == null) return false;
+        return !brand.contains("1.8") && (brand.contains("1.9") || brand.contains("1.1") || brand.contains("1.2") || brand.contains("1.3") || brand.contains("1.4") || brand.contains("1.5") || brand.contains("1.6") || brand.contains("1.7") || brand.contains("Hypixel"));
     }
 
     public boolean isEquipOffset() {

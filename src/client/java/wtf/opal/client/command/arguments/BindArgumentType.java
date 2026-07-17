@@ -22,7 +22,7 @@ public final class BindArgumentType implements ArgumentType<String> {
     private static final BindArgumentType INSTANCE = new BindArgumentType();
     private static final DynamicCommandExceptionType NO_SUCH_BIND = new DynamicCommandExceptionType(name -> Text.literal("No bind with name " + name + " exists."));
     private final List<String> binds = new ArrayList<>();
-    private static final Collection<String> EXAMPLES = List.of("RIGHT_SHIFT", "G", "MOUSE_0", "CLEAR");
+    private static final Collection<String> EXAMPLES = List.of("RIGHT_SHIFT", "G", "MOUSE_0", "CLEAR", "NONE");
 
     public static BindArgumentType create() {
         return INSTANCE;
@@ -42,6 +42,7 @@ public final class BindArgumentType implements ArgumentType<String> {
             binds.add("MOUSE_" + i);
         }
         binds.add("CLEAR");
+        binds.add("NONE");
     }
 
     @Override

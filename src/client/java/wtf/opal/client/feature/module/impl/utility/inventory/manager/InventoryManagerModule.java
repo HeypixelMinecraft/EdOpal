@@ -105,6 +105,41 @@ public final class InventoryManagerModule extends Module {
                 return;
             }
 
+            final ItemStack stack = validSlot.getStack();
+
+            if (stack.isIn(ItemTags.SWORDS)) {
+                if (settings.getSlots().getProperty("Sword").getValue()) {
+                    if (bestSword != null && ItemStack.areItemsEqual(stack, bestSword.getStack())) {
+                        return;
+                    }
+                }
+                return;
+            }
+
+            if (stack.isIn(ItemTags.PICKAXES)) {
+                if (settings.getSlots().getProperty("Pickaxe").getValue()) {
+                    if (bestPickaxe != null && ItemStack.areItemsEqual(stack, bestPickaxe.getStack())) {
+                        return;
+                    }
+                }
+                return;
+            }
+
+            if (stack.getItem() instanceof AxeItem) {
+                if (settings.getSlots().getProperty("Axe").getValue()) {
+                    if (bestAxe != null && ItemStack.areItemsEqual(stack, bestAxe.getStack())) {
+                        return;
+                    }
+                }
+                return;
+            }
+
+            if (stack.getItem() instanceof BlockItem && settings.getSlots().getProperty("Blocks").getValue()) {
+                if (mostBlocks != null && ItemStack.areItemsEqual(stack, mostBlocks.getStack())) {
+                    return;
+                }
+            }
+
             if (settings.getSlots().getProperty("Sword").getValue()) {
                 arrangeBestSword(screenHandler, preferredSwordSlot, bestSword);
             }
@@ -118,20 +153,20 @@ public final class InventoryManagerModule extends Module {
                 arrangeMostBlocks(screenHandler, preferredBlockSlot, mostBlocks);
             }
 
-            if (validSlot.getIndex() == preferredSwordSlot.getIndex() && validSlot.getStack().isIn(ItemTags.SWORDS)) {
+            if (validSlot.getIndex() == preferredSwordSlot.getIndex()) {
                 return;
             }
-            if (validSlot.getIndex() == preferredPickaxeSlot.getIndex() && validSlot.getStack().isIn(ItemTags.PICKAXES)) {
+            if (validSlot.getIndex() == preferredPickaxeSlot.getIndex()) {
                 return;
             }
-            if (validSlot.getIndex() == preferredAxeSlot.getIndex() && validSlot.getStack().getItem() instanceof AxeItem) {
+            if (validSlot.getIndex() == preferredAxeSlot.getIndex()) {
                 return;
             }
             if (validSlot.getStack().getItem() instanceof BucketItem) {
                 return;
             }
 
-            if (validSlot.getStack().getName().getStyle().isEmpty() || blitz && validSlot.getStack().getItem() != Items.NETHER_STAR) { // blitz star
+            if (validSlot.getStack().getName().getStyle().isEmpty() || blitz && validSlot.getStack().getItem() != Items.NETHER_STAR) {
                 InventoryUtility.drop(playerHandler, validSlot.id);
                 stopwatch.reset();
             }

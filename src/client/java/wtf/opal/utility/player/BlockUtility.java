@@ -6,6 +6,7 @@ import net.minecraft.client.render.entity.state.BipedEntityRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.ShieldItem;
 import net.minecraft.item.consume.UseAction;
 import net.minecraft.registry.tag.ItemTags;
@@ -101,13 +102,17 @@ public final class BlockUtility {
         final BlockModule blockModule = moduleRepository.getModule(BlockModule.class);
 
         final SlotHelper slotHelper = SlotHelper.getInstance();
+        final ItemStack mainHandStack = slotHelper.getMainHandStack(mc.player);
 
-        return animationsModule.isEnabled() && animationsModule.isSwordBlocking() && noSlowModule.isEnabled()
-                && noSlowModule.getAction() == NoSlowModule.Action.BLOCKABLE
-                && (MouseHelper.getRightButton().isPressed() || (blockModule.isEnabled() && blockModule.isBlocking()))
-                && slotHelper.getMainHandStack(mc.player).isIn(ItemTags.SWORDS)
-                && !InventoryUtility.isBlockInteractable(PlayerUtility.getBlockOver())
-                && (mc.player.getOffHandStack().getItem() instanceof ShieldItem || slotHelper.getMainHandStack(mc.player).getUseAction() == UseAction.BLOCK);
+        final boolean isSword = mainHandStack.isIn(ItemTags.SWORDS);
+
+        if (!animationsModule.isEnabled() || !animationsModule.isSwordBlocking()) return false;
+        if (!noSlowModule.isEnabled() || noSlowModule.getAction() != NoSlowModule.Action.BLOCKABLE) return false;
+        if (!MouseHelper.getRightButton().isPressed() && !(blockModule.isEnabled() && blockModule.isBlocking())) return false;
+        if (!isSword) return false;
+        if (InventoryUtility.isBlockInteractable(PlayerUtility.getBlockOver())) return false;
+
+        return mc.player.getOffHandStack().getItem() instanceof ShieldItem || mainHandStack.getUseAction() == UseAction.BLOCK;
     }
 
 }
