@@ -35,5 +35,3 @@
 ## 许可证
 
 本项目采用 GNU General Public License v3.0 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件。
-
-altmanager懒得修了，明天看看另一位dev修不修
