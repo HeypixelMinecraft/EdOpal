@@ -52,7 +52,6 @@ dependencies {
 	modImplementation include ('org.graalvm.polyglot:polyglot:23.1.0')
 	modImplementation include("net.hypixel:mod-api:1.0.1")
 	modImplementation include ('com.github.JnCrMx:discord-game-sdk4j:v0.5.5')
-	modImplementation include("net.raphimc:MinecraftAuth:5.0.1")
 
 	modApi include("org.lwjgl:lwjgl-nanovg:3.3.3")
 	modRuntimeOnly include("org.lwjgl:lwjgl-nanovg:3.3.3:natives-linux")

@@ -1,12 +1,10 @@
 package wtf.opal.client.feature.helper.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.MinecraftClient;
 import wtf.opal.client.Constants;
+import wtf.opal.client.feature.helper.impl.auth.Account;
+import wtf.opal.client.feature.helper.impl.auth.MicrosoftAuth;
 
-import java.io.*;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,17 +13,16 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 /**
- * Alt Manager - 简化版账号管理（暂时移除 MinecraftAuth 依赖）
- * 后续可以重新集成完整的 Microsoft 认证
+ * Alt Manager - 账号管理
+ * 基于 ksyzov/AccountManager 的账号管理逻辑移植
  */
 public final class AltManager {
 
     private static final AltManager INSTANCE = new AltManager();
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private final AccountStorage accountStorage;
-    private List<AltAccount> accounts = new ArrayList<>();
-    private AltAccount currentAccount;
+    private List<Account> accounts = new ArrayList<>();
+    private Account currentAccount;
     private AuthenticationStatus status = AuthenticationStatus.IDLE;
 
     private AltManager() {
@@ -37,11 +34,11 @@ public final class AltManager {
         return INSTANCE;
     }
 
-    public List<AltAccount> getAccounts() {
+    public List<Account> getAccounts() {
         return accounts;
     }
 
-    public AltAccount getCurrentAccount() {
+    public Account getCurrentAccount() {
         return currentAccount;
     }
 
@@ -55,15 +52,12 @@ public final class AltManager {
     private void loadAccounts() {
         accounts = accountStorage.loadAccounts();
 
-        // 从当前 Minecraft 会话恢复当前账号
         try {
             Object session = Constants.mc.getSession();
             String username = (String) session.getClass().getMethod("getUsername").invoke(session);
-            String uuid = (String) session.getClass().getMethod("getUuidOrNull").invoke(session);
 
-            // 查找匹配的账号
-            for (AltAccount account : accounts) {
-                if (account.username.equals(username)) {
+            for (Account account : accounts) {
+                if (account.getUsername().equals(username)) {
                     currentAccount = account;
                     break;
                 }
@@ -76,7 +70,7 @@ public final class AltManager {
     /**
      * 保存账号列表
      */
-    private void saveAccounts() {
+    public void saveAccounts() {
         try {
             accountStorage.saveAccounts(accounts);
         } catch (AuthenticationException e) {
@@ -85,14 +79,9 @@ public final class AltManager {
     }
 
     /**
-     * 添加离线账号
+     * 添加账号
      */
-    public void addOfflineAccount(String username) {
-        AltAccount account = new AltAccount();
-        account.type = AccountType.OFFLINE;
-        account.username = username;
-        account.uuid = generateOfflineUUID(username);
-
+    public void addAccount(Account account) {
         if (!accounts.contains(account)) {
             accounts.add(account);
             saveAccounts();
@@ -102,7 +91,7 @@ public final class AltManager {
     /**
      * 移除账号
      */
-    public void removeAccount(AltAccount account) {
+    public void removeAccount(Account account) {
         accounts.remove(account);
         saveAccounts();
     }
@@ -116,10 +105,8 @@ public final class AltManager {
             Object session = createSession(username, uuid.toString(), "", "OFFLINE");
             setSession(session);
 
-            AltAccount account = new AltAccount();
-            account.type = AccountType.OFFLINE;
-            account.username = username;
-            account.uuid = uuid;
+            Account account = new Account("", "", username, 0L);
+            account.setUuid(uuid.toString());
             this.currentAccount = account;
 
             if (!accounts.contains(account)) {
@@ -135,38 +122,170 @@ public final class AltManager {
     }
 
     /**
-     * Microsoft 登录（暂时提示使用官方启动器）
-     * TODO: 后续集成 MinecraftAuth 完整认证
+     * Microsoft OAuth 登录
      */
-    public CompletableFuture<AltAccount> loginMicrosoft(Consumer<AuthenticationStatus> statusCallback) {
+    public CompletableFuture<Account> loginMicrosoft(Consumer<AuthenticationStatus> statusCallback, Executor executor) {
         return CompletableFuture.supplyAsync(() -> {
-            statusCallback.accept(AuthenticationStatus.FAILED);
-            this.status = AuthenticationStatus.FAILED;
+            try {
+                status = AuthenticationStatus.WAITING_FOR_BROWSER;
+                statusCallback.accept(status);
 
-            // 暂时不支持，提示用户
-            throw new CompletionException(new AuthenticationException(
-                    AuthenticationException.AuthenticationError.MICROSOFT_AUTH_FAILED,
-                    "Microsoft authentication temporarily unavailable. Please use the official launcher."
-            ));
-        });
+                String state = MicrosoftAuth.randomState();
+                String authLink = MicrosoftAuth.getMSAuthLink(state).toString();
+
+                copyToClipboard(authLink);
+                openBrowser(authLink);
+
+                status = AuthenticationStatus.ACQUIRING_TOKENS;
+                statusCallback.accept(status);
+
+                String authCode = MicrosoftAuth.acquireMSAuthCode(state, executor).join();
+
+                status = AuthenticationStatus.ACQUIRING_TOKENS;
+                statusCallback.accept(status);
+
+                var msTokens = MicrosoftAuth.acquireMSAccessTokens(authCode, executor).join();
+                String msAccessToken = msTokens.get("access_token");
+                String refreshToken = msTokens.get("refresh_token");
+
+                status = AuthenticationStatus.AUTHENTICATING_XBOX;
+                statusCallback.accept(status);
+
+                String xboxToken = MicrosoftAuth.acquireXboxAccessToken(msAccessToken, executor).join();
+
+                status = AuthenticationStatus.AUTHENTICATING_XSTS;
+                statusCallback.accept(status);
+
+                var xstsData = MicrosoftAuth.acquireXboxXstsToken(xboxToken, executor).join();
+                String xstsToken = xstsData.get("Token");
+                String userHash = xstsData.get("uhs");
+
+                status = AuthenticationStatus.AUTHENTICATING_MINECRAFT;
+                statusCallback.accept(status);
+
+                String mcToken = MicrosoftAuth.acquireMCAccessToken(xstsToken, userHash, executor).join();
+
+                status = AuthenticationStatus.FETCHING_PROFILE;
+                statusCallback.accept(status);
+
+                MicrosoftAuth.MinecraftProfile profile = MicrosoftAuth.login(mcToken, executor).join();
+
+                Object session = createSession(profile.username(), profile.uuid(), profile.accessToken(), "MOJANG");
+                setSession(session);
+
+                Account account = new Account(refreshToken, profile.accessToken(), profile.username(), 0L);
+                account.setUuid(profile.uuid());
+                this.currentAccount = account;
+
+                if (!accounts.contains(account)) {
+                    accounts.add(account);
+                }
+                saveAccounts();
+
+                status = AuthenticationStatus.SUCCESS;
+                statusCallback.accept(status);
+                return account;
+            } catch (CompletionException e) {
+                status = AuthenticationStatus.FAILED;
+                statusCallback.accept(status);
+                throw e;
+            } catch (Exception e) {
+                status = AuthenticationStatus.FAILED;
+                statusCallback.accept(status);
+                throw new CompletionException(new AuthenticationException(
+                        AuthenticationException.AuthenticationError.MICROSOFT_AUTH_FAILED,
+                        e.getMessage(),
+                        e
+                ));
+            }
+        }, executor);
     }
 
     /**
-     * 刷新账号令牌（离线账号不需要）
+     * 刷新账号令牌
      */
-    public CompletableFuture<AltAccount> refreshAccount(AltAccount account, Consumer<AuthenticationStatus> statusCallback) {
+    public CompletableFuture<Account> refreshAccount(Account account, Consumer<AuthenticationStatus> statusCallback, Executor executor) {
         return CompletableFuture.supplyAsync(() -> {
-            if (account.type != AccountType.MICROSOFT) {
+            if (!account.isMicrosoft() || account.getRefreshToken() == null || account.getRefreshToken().isEmpty()) {
                 statusCallback.accept(AuthenticationStatus.SUCCESS);
-                return account; // 离线账号不需要刷新
+                return account;
             }
 
-            statusCallback.accept(AuthenticationStatus.FAILED);
-            throw new CompletionException(new AuthenticationException(
-                    AuthenticationException.AuthenticationError.INVALID_TOKEN,
-                    "Microsoft authentication temporarily unavailable"
-            ));
-        });
+            try {
+                status = AuthenticationStatus.REFRESHING_TOKEN;
+                statusCallback.accept(status);
+
+                var msTokens = MicrosoftAuth.refreshMSAccessTokens(account.getRefreshToken(), executor).join();
+                String msAccessToken = msTokens.get("access_token");
+                String refreshToken = msTokens.get("refresh_token");
+
+                String xboxToken = MicrosoftAuth.acquireXboxAccessToken(msAccessToken, executor).join();
+                var xstsData = MicrosoftAuth.acquireXboxXstsToken(xboxToken, executor).join();
+                String xstsToken = xstsData.get("Token");
+                String userHash = xstsData.get("uhs");
+                String mcToken = MicrosoftAuth.acquireMCAccessToken(xstsToken, userHash, executor).join();
+                MicrosoftAuth.MinecraftProfile profile = MicrosoftAuth.login(mcToken, executor).join();
+
+                Object session = createSession(profile.username(), profile.uuid(), profile.accessToken(), "MOJANG");
+                setSession(session);
+
+                account.setRefreshToken(refreshToken);
+                account.setAccessToken(profile.accessToken());
+                account.setUsername(profile.username());
+                account.setUuid(profile.uuid());
+                this.currentAccount = account;
+                saveAccounts();
+
+                status = AuthenticationStatus.SUCCESS;
+                statusCallback.accept(status);
+                return account;
+            } catch (CompletionException e) {
+                status = AuthenticationStatus.FAILED;
+                statusCallback.accept(status);
+                throw e;
+            } catch (Exception e) {
+                status = AuthenticationStatus.FAILED;
+                statusCallback.accept(status);
+                throw new CompletionException(new AuthenticationException(
+                        AuthenticationException.AuthenticationError.INVALID_TOKEN,
+                        e.getMessage(),
+                        e
+                ));
+            }
+        }, executor);
+    }
+
+    /**
+     * 使用已有账号直接登录（先尝试 accessToken，失败则 refresh）
+     */
+    public CompletableFuture<Account> loginAccount(Account account, Consumer<AuthenticationStatus> statusCallback, Executor executor) {
+        if (!account.isMicrosoft()) {
+            return CompletableFuture.supplyAsync(() -> {
+                loginOffline(account.getUsername());
+                return account;
+            }, executor);
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                MicrosoftAuth.MinecraftProfile profile = MicrosoftAuth.login(account.getAccessToken(), executor).join();
+                Object session = createSession(profile.username(), profile.uuid(), profile.accessToken(), "MOJANG");
+                setSession(session);
+
+                account.setUsername(profile.username());
+                account.setUuid(profile.uuid());
+                account.setAccessToken(profile.accessToken());
+                this.currentAccount = account;
+                saveAccounts();
+
+                status = AuthenticationStatus.SUCCESS;
+                statusCallback.accept(status);
+                return account;
+            } catch (Exception e) {
+                // accessToken 失效，尝试 refresh
+                return refreshAccount(account, statusCallback, executor).join();
+            }
+        }, executor);
     }
 
     /**
@@ -181,10 +300,19 @@ public final class AltManager {
             Class<?> accountTypeEnum = Class.forName(sessionClassName + "$AccountType");
             Object accountTypeValue = Enum.valueOf((Class<? extends Enum>) accountTypeEnum, accountType);
 
-            java.lang.reflect.Constructor<?> constructor = sessionClass.getConstructor(
-                    String.class, String.class, String.class, accountTypeEnum
-            );
-            return constructor.newInstance(username, uuid, accessToken, accountTypeValue);
+            try {
+                // Minecraft 1.21+ Session(String, UUID, String, AccountType)
+                java.lang.reflect.Constructor<?> constructor = sessionClass.getConstructor(
+                        String.class, UUID.class, String.class, accountTypeEnum
+                );
+                return constructor.newInstance(username, UUID.fromString(uuid), accessToken, accountTypeValue);
+            } catch (NoSuchMethodException ignored) {
+                // 旧版本 Session(String, String, String, AccountType)
+                java.lang.reflect.Constructor<?> constructor = sessionClass.getConstructor(
+                        String.class, String.class, String.class, accountTypeEnum
+                );
+                return constructor.newInstance(username, uuid, accessToken, accountTypeValue);
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to create session", e);
         }
@@ -211,33 +339,27 @@ public final class AltManager {
     }
 
     /**
-     * 账号类型枚举
+     * 复制文本到剪贴板
      */
-    public enum AccountType {
-        OFFLINE, MICROSOFT
+    public static void copyToClipboard(String text) {
+        try {
+            java.awt.datatransfer.StringSelection selection = new java.awt.datatransfer.StringSelection(text);
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
-     * 账号信息类
+     * 尝试用系统浏览器打开链接
      */
-    public static class AltAccount {
-        public AccountType type;
-        public String username;
-        public UUID uuid;
-        public String accessToken;
-        public String refreshToken;
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            AltAccount that = (AltAccount) o;
-            return username.equals(that.username);
-        }
-
-        @Override
-        public int hashCode() {
-            return username.hashCode();
+    public static void openBrowser(String url) {
+        try {
+            if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
+                java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

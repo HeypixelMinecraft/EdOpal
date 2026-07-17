@@ -15,19 +15,34 @@ public enum AuthenticationStatus {
     WAITING_FOR_BROWSER("Waiting for browser login"),
 
     /**
-     * 正在获取 Microsoft 访问令牌
+     * 正在获取 Microsoft 授权码/访问令牌
      */
-    ACQUIRING_MS_TOKEN("Acquiring Microsoft token"),
+    ACQUIRING_TOKENS("Acquiring Microsoft tokens"),
 
     /**
      * 正在进行 Xbox Live 认证
      */
-    XBOX_AUTHENTICATING("Authenticating with Xbox Live"),
+    AUTHENTICATING_XBOX("Authenticating with Xbox Live"),
+
+    /**
+     * 正在进行 Xbox XSTS 认证
+     */
+    AUTHENTICATING_XSTS("Authenticating with Xbox XSTS"),
 
     /**
      * 正在进行 Minecraft 认证
      */
-    MINECRAFT_AUTHENTICATING("Authenticating with Minecraft"),
+    AUTHENTICATING_MINECRAFT("Authenticating with Minecraft"),
+
+    /**
+     * 正在获取 Minecraft 个人资料
+     */
+    FETCHING_PROFILE("Fetching Minecraft profile"),
+
+    /**
+     * 正在刷新令牌
+     */
+    REFRESHING_TOKEN("Refreshing token"),
 
     /**
      * 正在保存账号信息

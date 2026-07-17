@@ -8,6 +8,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import wtf.opal.event.EventDispatcher;
 import wtf.opal.event.impl.game.server.ServerDisconnectEvent;
 
+import java.lang.reflect.Field;
+
 @Mixin(DisconnectedScreen.class)
 public final class DisconnectedScreenMixin {
 
@@ -19,7 +21,20 @@ public final class DisconnectedScreenMixin {
             at = @At("HEAD")
     )
     private void injectDisconnectEvent(CallbackInfo ci) {
-        EventDispatcher.dispatch(new ServerDisconnectEvent());
+        String reason = extractReason((DisconnectedScreen) (Object) this);
+        EventDispatcher.dispatch(new ServerDisconnectEvent(reason));
     }
 
+    private static String extractReason(DisconnectedScreen screen) {
+        try {
+            Field reasonField = DisconnectedScreen.class.getDeclaredField("reason");
+            reasonField.setAccessible(true);
+            Object reason = reasonField.get(screen);
+            if (reason instanceof net.minecraft.text.Text text) {
+                return text.getString();
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
 }

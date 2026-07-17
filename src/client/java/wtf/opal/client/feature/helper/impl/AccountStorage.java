@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import wtf.opal.client.Constants;
+import wtf.opal.client.feature.helper.impl.auth.Account;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -72,7 +73,7 @@ public class AccountStorage {
     /**
      * 保存账号列表（加密）
      */
-    public void saveAccounts(List<AltManager.AltAccount> accounts) throws AuthenticationException {
+    public void saveAccounts(List<Account> accounts) throws AuthenticationException {
         try {
             // 序列化为JSON
             String json = GSON.toJson(accounts);
@@ -116,7 +117,7 @@ public class AccountStorage {
     /**
      * 加载账号列表（解密）
      */
-    public List<AltManager.AltAccount> loadAccounts() {
+    public List<Account> loadAccounts() {
         if (!storageFile.exists()) {
             return new ArrayList<>();
         }
@@ -148,7 +149,7 @@ public class AccountStorage {
             String json = new String(decryptedData, StandardCharsets.UTF_8);
 
             // 反序列化
-            return GSON.fromJson(json, new TypeToken<List<AltManager.AltAccount>>(){}.getType());
+            return GSON.fromJson(json, new TypeToken<List<Account>>(){}.getType());
         } catch (Exception e) {
             // 解密失败，返回空列表（可能是密钥变更或文件损坏）
             e.printStackTrace();

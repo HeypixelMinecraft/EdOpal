@@ -198,6 +198,8 @@ public final class OpalClient {
         FadingBlockHelper.setInstance();
         ScreenPositionManager.setInstance();
         TransactionStreamValidator.setInstance();
+
+        EventDispatcher.subscribe(new AltManagerEvents());
     }
 
     
