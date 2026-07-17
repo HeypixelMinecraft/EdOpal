@@ -244,7 +244,7 @@ public final class InventoryManagerModule extends Module {
                 return;
             }
 
-            if (validSlot.getStack().getName().getStyle().isEmpty() || blitz && validSlot.getStack().getItem() != Items.NETHER_STAR) {
+            if (validSlot.getStack().getName().getStyle().isEmpty()) {
                 InventoryUtility.drop(playerHandler, validSlot.id);
                 stopwatch.reset();
             }
