@@ -5,13 +5,14 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.MinecraftClient;
 import net.raphimc.minecraftauth.MinecraftAuth;
+import net.raphimc.minecraftauth.java.util.ISession;
 import net.raphimc.minecraftauth.step.java.session.StepFullJavaSession;
-import net.raphimc.minecraftauth.step.msa.step.MsaStep;
-import net.raphimc.minecraftauth.util.MicrosoftOauthPojoAdapters;
+import net.raphimc.minecraftauth.step.msa.step.StepMsaDeviceCode;
 import wtf.opal.client.Constants;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,16 +29,17 @@ public final class AltManager {
 
     // Microsoft OAuth 应用配置
     private static final String CLIENT_ID = "44387aa2-cd6d-4cdc-b25d-2fa7eb6df546";
-    private static final int PORT = 25575;
 
     private final AccountStorage accountStorage;
     private List<AltAccount> accounts = new ArrayList<>();
     private AltAccount currentAccount;
     private AuthenticationStatus status = AuthenticationStatus.IDLE;
     private StepFullJavaSession.FullJavaSession javaSession;
+    private HttpClient httpClient;
 
     private AltManager() {
         this.accountStorage = new AccountStorage();
+        this.httpClient = MinecraftAuth.createHttpClient();
         loadAccounts();
     }
 
@@ -140,7 +142,7 @@ public final class AltManager {
     }
 
     /**
-     * 开始 Microsoft 登录流程
+     * 开始 Microsoft 登录流程（使用设备代码）
      * @param statusCallback 状态更新回调
      * @return CompletableFuture 包含登录结果
      */
@@ -150,13 +152,14 @@ public final class AltManager {
                 statusCallback.accept(AuthenticationStatus.WAITING_FOR_BROWSER);
                 this.status = AuthenticationStatus.WAITING_FOR_BROWSER;
 
-                // 创建 MinecraftAuth 客户端
-                StepFullJavaSession.FullJavaSession session = MinecraftAuth.getJavaClient(
-                        MinecraftAuth.builder()
-                                .withClientId(CLIENT_ID)
-                                .withDeviceToken()
-                                .build()
-                ).loginWithMicrosoft();
+                // 使用 MinecraftAuth 的设备代码登录
+                StepFullJavaSession.FullJavaSession session = MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.getFromInput(
+                        httpClient,
+                        new StepMsaDeviceCode.MsaDeviceCodeCallback(deviceCode -> {
+                            // 这里可以触发打开浏览器，但由 AltManagerScreen 处理
+                            // 设备代码登录会在控制台显示验证 URL 和代码
+                        })
+                );
 
                 statusCallback.accept(AuthenticationStatus.ACQUIRING_MS_TOKEN);
                 this.status = AuthenticationStatus.ACQUIRING_MS_TOKEN;
@@ -165,9 +168,9 @@ public final class AltManager {
                 this.status = AuthenticationStatus.MINECRAFT_AUTHENTICATING;
 
                 // 提取账号信息
-                String username = session.getGameProfile().getName();
-                String uuid = session.getGameProfile().getId().toString();
-                String accessToken = session.getAccessToken();
+                String username = session.getMcProfile().getName();
+                String uuid = session.getMcProfile().getId().toString();
+                String accessToken = session.getMcProfile().getMcToken().getAccessToken();
 
                 // 切换会话
                 Object mcSession = createSession(username, uuid, accessToken, "MSA");
@@ -222,14 +225,9 @@ public final class AltManager {
 
                 // 使用 refresh token 刷新
                 if (javaSession != null) {
-                    javaSession = MinecraftAuth.getJavaClient(
-                            MinecraftAuth.builder()
-                                    .withClientId(CLIENT_ID)
-                                    .withDeviceToken()
-                                    .build()
-                    ).refreshJavaSession(javaSession);
+                    javaSession = MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.refresh(httpClient, javaSession);
 
-                    String accessToken = javaSession.getAccessToken();
+                    String accessToken = javaSession.getMcProfile().getMcToken().getAccessToken();
 
                     account.accessToken = accessToken;
                     saveAccounts();

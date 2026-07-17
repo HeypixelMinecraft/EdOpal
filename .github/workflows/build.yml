@@ -36,23 +36,3 @@ jobs:
           build/libs/*.jar
           !build/libs/*-sources.jar
         retention-days: 30
-
-    - name: Get version from build.gradle
-      id: get_version
-      run: |
-        VERSION=$(grep "version = " build.gradle | sed "s/version = '\(.*\)'/\1/")
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-
-    - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v${{ steps.get_version.outputs.VERSION }}-${{ github.sha }}
-        name: EdOpal v${{ steps.get_version.outputs.VERSION }}
-        draft: false
-        prerelease: false
-        files: |
-          build/libs/*.jar
-          !build/libs/*-sources.jar
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
