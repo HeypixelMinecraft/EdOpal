@@ -17,6 +17,7 @@ import wtf.opal.client.command.impl.player.UsernameCommand;
 import wtf.opal.client.command.impl.player.movement.HClipCommand;
 import wtf.opal.client.command.impl.player.movement.VClipCommand;
 import wtf.opal.client.command.repository.CommandRepository;
+import wtf.opal.client.feature.helper.impl.AltManagerEvents;
 import wtf.opal.client.feature.helper.impl.LocalDataWatch;
 import wtf.opal.client.feature.helper.impl.chat.ChatHelper;
 import wtf.opal.client.feature.helper.impl.player.hypixel.TransactionStreamValidator;
@@ -148,6 +149,7 @@ public final class OpalClient {
                     new BlinkModule(),
                     new NoRotateModule(),
                     new SpammerModule(),
+                    new InsultModule(),
                     new PartySpamModule()
             );
         }

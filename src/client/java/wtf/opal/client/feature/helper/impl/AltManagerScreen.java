@@ -5,6 +5,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.lwjgl.glfw.GLFW;
@@ -104,7 +105,7 @@ public final class AltManagerScreen extends Screen {
         addDrawableChild(deleteButton);
 
         // 关闭
-        closeButton = ButtonWidget.builder(Text.literal("Close"), button -> close()).dimensions(centerX + 2, centerY + 85, 72, 20).build();
+        closeButton = ButtonWidget.builder(Text.literal("Close"), button -> closeScreen()).dimensions(centerX + 2, centerY + 85, 72, 20).build();
         addDrawableChild(closeButton);
     }
 
@@ -154,7 +155,7 @@ public final class AltManagerScreen extends Screen {
         this.statusMessageTime = System.currentTimeMillis();
     }
 
-    private void close() {
+    private void closeScreen() {
         executor.shutdownNow();
         if (mc != null) {
             mc.setScreen(null);
@@ -291,36 +292,22 @@ public final class AltManagerScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyInput keyInput) {
+        int keyCode = keyInput.key();
+
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            close();
+            closeScreen();
             return true;
         }
         if (accounts.isEmpty()) {
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(keyInput);
         }
 
         if (keyCode == GLFW.GLFW_KEY_UP) {
-            if (modifiers == GLFW.GLFW_MOD_CONTROL && selectedIndex > 0) {
-                Account temp = accounts.get(selectedIndex);
-                accounts.set(selectedIndex, accounts.get(selectedIndex - 1));
-                accounts.set(selectedIndex - 1, temp);
-                selectedIndex--;
-                AltManager.get().saveAccounts();
-            } else {
-                selectedIndex = selectedIndex <= 0 ? accounts.size() - 1 : selectedIndex - 1;
-            }
+            selectedIndex = selectedIndex <= 0 ? accounts.size() - 1 : selectedIndex - 1;
             return true;
         } else if (keyCode == GLFW.GLFW_KEY_DOWN) {
-            if (modifiers == GLFW.GLFW_MOD_CONTROL && selectedIndex >= 0 && selectedIndex < accounts.size() - 1) {
-                Account temp = accounts.get(selectedIndex);
-                accounts.set(selectedIndex, accounts.get(selectedIndex + 1));
-                accounts.set(selectedIndex + 1, temp);
-                selectedIndex++;
-                AltManager.get().saveAccounts();
-            } else {
-                selectedIndex = selectedIndex >= accounts.size() - 1 ? 0 : selectedIndex + 1;
-            }
+            selectedIndex = selectedIndex >= accounts.size() - 1 ? 0 : selectedIndex + 1;
             return true;
         } else if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
             loginSelected();
@@ -336,7 +323,7 @@ public final class AltManagerScreen extends Screen {
             return true;
         }
 
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyInput);
     }
 
     @Override

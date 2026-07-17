@@ -4,6 +4,7 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import wtf.opal.client.feature.helper.impl.auth.Account;
@@ -46,7 +47,7 @@ public final class MicrosoftAuthScreen extends Screen {
         }).dimensions(centerX - 105, centerY + 30, 100, 20).build();
         addDrawableChild(openButton);
 
-        cancelButton = ButtonWidget.builder(Text.literal("Cancel"), button -> close()).dimensions(centerX + 5, centerY + 30, 100, 20).build();
+        cancelButton = ButtonWidget.builder(Text.literal("Cancel"), button -> closeScreen()).dimensions(centerX + 5, centerY + 30, 100, 20).build();
         addDrawableChild(cancelButton);
 
         startAuth();
@@ -136,7 +137,7 @@ public final class MicrosoftAuthScreen extends Screen {
         }
     }
 
-    private void close() {
+    private void closeScreen() {
         executor.shutdownNow();
         if (mc != null) {
             mc.setScreen(parent);
@@ -147,7 +148,7 @@ public final class MicrosoftAuthScreen extends Screen {
     public void tick() {
         super.tick();
         if (completed && status == AuthenticationStatus.SUCCESS) {
-            close();
+            closeScreen();
         }
     }
 
@@ -177,12 +178,12 @@ public final class MicrosoftAuthScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
-            close();
+    public boolean keyPressed(KeyInput keyInput) {
+        if (keyInput.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            closeScreen();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyInput);
     }
 
     @Override
