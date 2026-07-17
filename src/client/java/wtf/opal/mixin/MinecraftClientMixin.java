@@ -1,7 +1,6 @@
 package wtf.opal.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.sugar.ref.LocalBooleanRef;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.RunArgs;
 import net.minecraft.client.gui.screen.Screen;
@@ -15,7 +14,6 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -40,7 +38,6 @@ import wtf.opal.event.impl.game.PreGameTickEvent;
 import wtf.opal.event.impl.game.ScheduledExecutablesEvent;
 import wtf.opal.event.impl.game.input.MouseHandleInputEvent;
 import wtf.opal.event.impl.game.input.PostHandleInputEvent;
-import wtf.opal.event.impl.game.player.interaction.AttackDelayEvent;
 import wtf.opal.event.impl.game.player.interaction.ItemUseEvent;
 import wtf.opal.event.impl.game.player.interaction.block.BlockPlacedEvent;
 import wtf.opal.event.impl.game.server.ServerDisconnectEvent;
@@ -49,9 +46,6 @@ import wtf.opal.utility.player.PlayerUtility;
 
 @Mixin(MinecraftClient.class)
 public abstract class MinecraftClientMixin {
-
-    @Shadow
-    protected abstract boolean doAttack();
 
     @Shadow
     protected int attackCooldown;
@@ -183,20 +177,6 @@ public abstract class MinecraftClientMixin {
         return instance.wasPressed();
     }
 
-    @Redirect(
-            method = "handleInputEvents",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;wasPressed()Z", ordinal = 11)
-    )
-    private boolean redirectUsingAttack(KeyBinding instance, @Local LocalBooleanRef bl3) {
-        if (this.isSwingWhileUsing() && MouseHelper.getLeftButton().wasPressed()) {
-            final boolean currentValue = bl3.get();
-            final boolean newValue = currentValue | doAttack();
-            bl3.set(newValue);
-            return true;
-        }
-        return false;
-    }
-
     @Inject(
             method = "doItemUse",
             at = @At("HEAD")
@@ -226,16 +206,6 @@ public abstract class MinecraftClientMixin {
     private boolean isSwingWhileUsing() {
         final BlockModule blockModule = OpalClient.getInstance().getModuleRepository().getModule(BlockModule.class);
         return blockModule.isEnabled() && blockModule.isSwingAllowed();
-    }
-
-    @Redirect(
-            method = "doAttack",
-            at = @At(value = "FIELD", target = "Lnet/minecraft/client/MinecraftClient;attackCooldown:I", opcode = Opcodes.PUTFIELD)
-    )
-    private void onAttackCooldown(MinecraftClient instance, int value) {
-        final AttackDelayEvent event = new AttackDelayEvent(value);
-        EventDispatcher.dispatch(event);
-        this.attackCooldown = event.getDelay();
     }
 
     @Inject(

@@ -1,5 +1,17 @@
 package wtf.opal.mixin;
 
+import java.util.concurrent.RejectedExecutionException;
+
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -10,15 +22,6 @@ import net.minecraft.network.listener.PacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
 import net.minecraft.text.Text;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import wtf.opal.client.feature.helper.impl.player.packet.blockage.impl.InboundNetworkBlockage;
 import wtf.opal.client.feature.helper.impl.player.packet.blockage.impl.OutboundNetworkBlockage;
 import wtf.opal.duck.ClientConnectionAccess;
@@ -28,14 +31,8 @@ import wtf.opal.event.impl.game.packet.InstantaneousSendPacketEvent;
 import wtf.opal.event.impl.game.packet.ReceivePacketEvent;
 import wtf.opal.event.impl.game.packet.SendPacketEvent;
 
-import java.util.concurrent.RejectedExecutionException;
-
 @Mixin(ClientConnection.class)
 public abstract class ClientConnectionMixin implements ClientConnectionAccess {
-
-    @Shadow
-    private static <T extends PacketListener> void handlePacket(Packet<T> packet, PacketListener listener) {
-    }
 
     @Shadow private volatile @Nullable PacketListener packetListener;
 
@@ -89,30 +86,9 @@ public abstract class ClientConnectionMixin implements ClientConnectionAccess {
         }
     }
 
-    @Inject(method = "handlePacket", at = @At("HEAD"), cancellable = true, require = 1)
-    private static void hookReceivePacket(Packet<?> packet, PacketListener listener, CallbackInfo ci) {
-        if (packet instanceof BundleS2CPacket bundleS2CPacket) {
-            ci.cancel();
-
-            for (Packet<?> packetInBundle : bundleS2CPacket.getPackets()) {
-                try {
-                    handlePacket(packetInBundle, listener);
-                } catch (OffThreadException ignored) {}
-            }
-            return;
-        }
-
-        final ReceivePacketEvent event = new ReceivePacketEvent(packet);
-        EventDispatcher.dispatch(event);
-
-        if (event.isCancelled()) {
-            ci.cancel();
-        }
-    }
-
     @Inject(
             method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/packet/Packet;)V",
-            at = @At(value = "INVOKE", target = "Lio/netty/channel/Channel;isOpen()Z"),
+            at = @At("HEAD"),
             cancellable = true
     )
     private void hookChannelRead(ChannelHandlerContext channelHandlerContext, Packet<?> packet, CallbackInfo ci) {
@@ -127,6 +103,23 @@ public abstract class ClientConnectionMixin implements ClientConnectionAccess {
                 }
                 return;
             }
+
+            final ReceivePacketEvent event = new ReceivePacketEvent(packet);
+            EventDispatcher.dispatch(event);
+
+            if (event.isCancelled() || InboundNetworkBlockage.get().isBlocked(packet)) {
+                ci.cancel();
+            }
+        }
+    }
+
+    @Inject(
+            method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/packet/Packet;)V",
+            at = @At(value = "INVOKE", target = "Lio/netty/channel/Channel;isOpen()Z", remap = false),
+            cancellable = true
+    )
+    private void hookChannelReadAfterCheck(ChannelHandlerContext channelHandlerContext, Packet<?> packet, CallbackInfo ci) {
+        if (this.getSide() == NetworkSide.CLIENTBOUND) {
             InstantaneousReceivePacketEvent event = new InstantaneousReceivePacketEvent(packet);
             EventDispatcher.dispatch(event);
             if (event.isCancelled() || InboundNetworkBlockage.get().isBlocked(packet)) {
@@ -145,7 +138,7 @@ public abstract class ClientConnectionMixin implements ClientConnectionAccess {
             } else {
                 if (packetListener.accepts(packet)) {
                     try {
-                        handlePacket(packet, packetListener);
+                        ((Packet) packet).apply(packetListener);
                     } catch (OffThreadException var5) {
                     } catch (RejectedExecutionException var6) {
                         this.disconnect(Text.translatable("multiplayer.disconnect.server_shutdown"));

@@ -16,7 +16,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import static wtf.opal.client.Constants.DIRECTORY;
+import wtf.opal.client.Constants;
+import static wtf.opal.client.Constants.getDirectory;
 
 public final class SaveUtility {
 
@@ -27,17 +28,19 @@ public final class SaveUtility {
             .create();
 
     private static final BindingService BINDING_SERVICE = OpalClient.getInstance().getBindRepository().getBindingService();
-    private static final File CONFIGS_DIRECTORY = new File(DIRECTORY, "configs");
+    private static File getConfigsDirectory() {
+        return new File(getDirectory(), "configs");
+    }
 
     private SaveUtility() {
     }
 
     public static void saveBindings() {
         try {
-            if (!DIRECTORY.exists()) {
-                DIRECTORY.mkdir();
+            if (!getDirectory().exists()) {
+                getDirectory().mkdir();
             }
-            final File file = new File(DIRECTORY, "bindings.json");
+            final File file = new File(getDirectory(), "bindings.json");
             final JsonArray bindingsArray = new JsonArray();
             for (final Pair<Integer, InputType> binding : BINDING_SERVICE.getBindingMap().keySet()) {
                 final JsonObject bindingJson = new JsonObject();
@@ -64,7 +67,7 @@ public final class SaveUtility {
     }
 
     public static void loadBindings() {
-        try (final FileReader reader = new FileReader(new File(DIRECTORY, "bindings.json"))) {
+        try (final FileReader reader = new FileReader(new File(getDirectory(), "bindings.json"))) {
             final JsonArray bindingsArray = JsonParser.parseReader(reader).getAsJsonArray();
             for (final JsonElement bindingElement : bindingsArray) {
                 final JsonObject bindingJson = bindingElement.getAsJsonObject();
@@ -91,10 +94,10 @@ public final class SaveUtility {
 
     public static void saveConfig(final String name) {
         try {
-            if (!CONFIGS_DIRECTORY.exists()) {
-                CONFIGS_DIRECTORY.mkdirs();
+            if (!getConfigsDirectory().exists()) {
+                getConfigsDirectory().mkdirs();
             }
-            final File file = new File(CONFIGS_DIRECTORY, name + ".json");
+            final File file = new File(getConfigsDirectory(), name + ".json");
             final JsonArray modulesArray = new JsonArray();
             for (final Module module : OpalClient.getInstance().getModuleRepository().getModules()) {
                 final JsonObject moduleJson = new JsonObject();
@@ -120,7 +123,7 @@ public final class SaveUtility {
     }
 
     public static boolean loadConfig(final String name) {
-        final File file = new File(CONFIGS_DIRECTORY, name + ".json");
+        final File file = new File(getConfigsDirectory(), name + ".json");
         if (!file.exists()) {
             return false;
         }
@@ -168,10 +171,10 @@ public final class SaveUtility {
 
     public static List<String> listConfigs() {
         final List<String> configNames = new ArrayList<>();
-        if (!CONFIGS_DIRECTORY.exists()) {
+        if (!getConfigsDirectory().exists()) {
             return configNames;
         }
-        final File[] files = CONFIGS_DIRECTORY.listFiles((dir, name) -> name.endsWith(".json"));
+        final File[] files = getConfigsDirectory().listFiles((dir, name) -> name.endsWith(".json"));
         if (files != null) {
             for (final File file : files) {
                 final String fname = file.getName();
@@ -182,7 +185,7 @@ public final class SaveUtility {
     }
 
     public static boolean deleteConfig(final String name) {
-        final File file = new File(CONFIGS_DIRECTORY, name + ".json");
+        final File file = new File(getConfigsDirectory(), name + ".json");
         return file.exists() && file.delete();
     }
 

@@ -25,7 +25,8 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
-import static wtf.opal.client.Constants.DIRECTORY;
+import wtf.opal.client.Constants;
+import static wtf.opal.client.Constants.getDirectory;
 import static wtf.opal.client.Constants.mc;
 
 public final class ScriptRepository {
@@ -46,7 +47,7 @@ public final class ScriptRepository {
         });
         scriptList.clear();
 
-        final File scriptsDir = new File(DIRECTORY, "scripts");
+        final File scriptsDir = new File(getDirectory(), "scripts");
         final File[] jsFiles = scriptsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".js"));
         if (jsFiles == null) {
             return 0;

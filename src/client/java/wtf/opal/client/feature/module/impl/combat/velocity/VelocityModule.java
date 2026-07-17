@@ -8,6 +8,7 @@ import wtf.opal.client.feature.module.ModuleCategory;
 import wtf.opal.client.feature.module.impl.combat.velocity.impl.MushMCVelocity;
 import wtf.opal.client.feature.module.impl.combat.velocity.impl.NormalVelocity;
 import wtf.opal.client.feature.module.impl.combat.velocity.impl.WatchdogVelocity;
+import wtf.opal.client.feature.module.impl.combat.velocity.impl.OldGrimVelocity;
 import wtf.opal.client.feature.module.impl.movement.flight.FlightModule;
 import wtf.opal.client.feature.module.impl.movement.longjump.LongJumpModule;
 import wtf.opal.client.feature.module.property.impl.mode.ModeProperty;
@@ -21,7 +22,7 @@ public final class VelocityModule extends Module {
     public VelocityModule() {
         super("Velocity", "Reduces or nullifies your players velocity when being hit.", ModuleCategory.COMBAT);
         this.addProperties(this.mode);
-        addModuleModes(mode, new NormalVelocity(this), new WatchdogVelocity(this), new MushMCVelocity(this));
+        addModuleModes(mode, new NormalVelocity(this), new WatchdogVelocity(this), new MushMCVelocity(this), new OldGrimVelocity(this));
     }
 
     @Override
@@ -47,7 +48,8 @@ public final class VelocityModule extends Module {
     public enum Mode {
         NORMAL("Normal"),
         WATCHDOG("Watchdog"),
-        MUSHMC("MushMC");
+        MUSHMC("MushMC"),
+        OLDGRIM("OldGrim");
 
         private final String name;
 

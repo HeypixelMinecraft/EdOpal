@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import static wtf.opal.client.Constants.mc;
 
 @Mixin(TitleScreen.class)
-public final class TitleScreenMixin {
+public abstract class TitleScreenMixin {
 
     private TitleScreenMixin() {
     }
