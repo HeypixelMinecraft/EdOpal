@@ -4,15 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.MinecraftClient;
-import net.raphimc.minecraftauth.MinecraftAuth;
-import net.raphimc.minecraftauth.java.util.ISession;
-import net.raphimc.minecraftauth.step.java.session.StepFullJavaSession;
-import net.raphimc.minecraftauth.step.msa.step.StepMsaDeviceCode;
 import wtf.opal.client.Constants;
 
 import java.io.*;
 import java.lang.reflect.Field;
-import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -20,26 +15,21 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 /**
- * Alt Manager - 使用 MinecraftAuth 库进行账号管理
+ * Alt Manager - 简化版账号管理（暂时移除 MinecraftAuth 依赖）
+ * 后续可以重新集成完整的 Microsoft 认证
  */
 public final class AltManager {
 
     private static final AltManager INSTANCE = new AltManager();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    // Microsoft OAuth 应用配置
-    private static final String CLIENT_ID = "44387aa2-cd6d-4cdc-b25d-2fa7eb6df546";
-
     private final AccountStorage accountStorage;
     private List<AltAccount> accounts = new ArrayList<>();
     private AltAccount currentAccount;
     private AuthenticationStatus status = AuthenticationStatus.IDLE;
-    private StepFullJavaSession.FullJavaSession javaSession;
-    private HttpClient httpClient;
 
     private AltManager() {
         this.accountStorage = new AccountStorage();
-        this.httpClient = MinecraftAuth.createHttpClient();
         loadAccounts();
     }
 
@@ -136,121 +126,46 @@ public final class AltManager {
                 accounts.add(account);
                 saveAccounts();
             }
+
+            status = AuthenticationStatus.SUCCESS;
         } catch (Exception e) {
+            status = AuthenticationStatus.FAILED;
             e.printStackTrace();
         }
     }
 
     /**
-     * 开始 Microsoft 登录流程（使用设备代码）
-     * @param statusCallback 状态更新回调
-     * @return CompletableFuture 包含登录结果
+     * Microsoft 登录（暂时提示使用官方启动器）
+     * TODO: 后续集成 MinecraftAuth 完整认证
      */
     public CompletableFuture<AltAccount> loginMicrosoft(Consumer<AuthenticationStatus> statusCallback) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                statusCallback.accept(AuthenticationStatus.WAITING_FOR_BROWSER);
-                this.status = AuthenticationStatus.WAITING_FOR_BROWSER;
+            statusCallback.accept(AuthenticationStatus.FAILED);
+            this.status = AuthenticationStatus.FAILED;
 
-                // 使用 MinecraftAuth 的设备代码登录
-                StepFullJavaSession.FullJavaSession session = MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.getFromInput(
-                        httpClient,
-                        new StepMsaDeviceCode.MsaDeviceCodeCallback(deviceCode -> {
-                            // 这里可以触发打开浏览器，但由 AltManagerScreen 处理
-                            // 设备代码登录会在控制台显示验证 URL 和代码
-                        })
-                );
-
-                statusCallback.accept(AuthenticationStatus.ACQUIRING_MS_TOKEN);
-                this.status = AuthenticationStatus.ACQUIRING_MS_TOKEN;
-
-                statusCallback.accept(AuthenticationStatus.MINECRAFT_AUTHENTICATING);
-                this.status = AuthenticationStatus.MINECRAFT_AUTHENTICATING;
-
-                // 提取账号信息
-                String username = session.getMcProfile().getName();
-                String uuid = session.getMcProfile().getId().toString();
-                String accessToken = session.getMcProfile().getMcToken().getAccessToken();
-
-                // 切换会话
-                Object mcSession = createSession(username, uuid, accessToken, "MSA");
-                setSession(mcSession);
-
-                statusCallback.accept(AuthenticationStatus.SAVING_ACCOUNT);
-                this.status = AuthenticationStatus.SAVING_ACCOUNT;
-
-                // 保存账号
-                AltAccount account = new AltAccount();
-                account.type = AccountType.MICROSOFT;
-                account.username = username;
-                account.uuid = UUID.fromString(uuid);
-                account.accessToken = accessToken;
-
-                this.currentAccount = account;
-                this.javaSession = session;
-
-                if (!accounts.contains(account)) {
-                    accounts.add(account);
-                    saveAccounts();
-                }
-
-                statusCallback.accept(AuthenticationStatus.SUCCESS);
-                this.status = AuthenticationStatus.SUCCESS;
-
-                return account;
-            } catch (Exception e) {
-                statusCallback.accept(AuthenticationStatus.FAILED);
-                this.status = AuthenticationStatus.FAILED;
-                throw new CompletionException(new AuthenticationException(
-                        AuthenticationException.AuthenticationError.MICROSOFT_AUTH_FAILED,
-                        "Microsoft authentication failed",
-                        e
-                ));
-            }
+            // 暂时不支持，提示用户
+            throw new CompletionException(new AuthenticationException(
+                    AuthenticationException.AuthenticationError.MICROSOFT_AUTH_FAILED,
+                    "Microsoft authentication temporarily unavailable. Please use the official launcher."
+            ));
         });
     }
 
     /**
-     * 刷新账号令牌
+     * 刷新账号令牌（离线账号不需要）
      */
     public CompletableFuture<AltAccount> refreshAccount(AltAccount account, Consumer<AuthenticationStatus> statusCallback) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                if (account.type != AccountType.MICROSOFT) {
-                    return account; // 离线账号不需要刷新
-                }
-
-                statusCallback.accept(AuthenticationStatus.ACQUIRING_MS_TOKEN);
-                this.status = AuthenticationStatus.ACQUIRING_MS_TOKEN;
-
-                // 使用 refresh token 刷新
-                if (javaSession != null) {
-                    javaSession = MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.refresh(httpClient, javaSession);
-
-                    String accessToken = javaSession.getMcProfile().getMcToken().getAccessToken();
-
-                    account.accessToken = accessToken;
-                    saveAccounts();
-
-                    statusCallback.accept(AuthenticationStatus.SUCCESS);
-                    this.status = AuthenticationStatus.SUCCESS;
-
-                    return account;
-                } else {
-                    throw new AuthenticationException(
-                            AuthenticationException.AuthenticationError.INVALID_TOKEN,
-                            "No valid session to refresh"
-                    );
-                }
-            } catch (Exception e) {
-                statusCallback.accept(AuthenticationStatus.FAILED);
-                this.status = AuthenticationStatus.FAILED;
-                throw new CompletionException(new AuthenticationException(
-                        AuthenticationException.AuthenticationError.INVALID_TOKEN,
-                        "Failed to refresh token",
-                        e
-                ));
+            if (account.type != AccountType.MICROSOFT) {
+                statusCallback.accept(AuthenticationStatus.SUCCESS);
+                return account; // 离线账号不需要刷新
             }
+
+            statusCallback.accept(AuthenticationStatus.FAILED);
+            throw new CompletionException(new AuthenticationException(
+                    AuthenticationException.AuthenticationError.INVALID_TOKEN,
+                    "Microsoft authentication temporarily unavailable"
+            ));
         });
     }
 
