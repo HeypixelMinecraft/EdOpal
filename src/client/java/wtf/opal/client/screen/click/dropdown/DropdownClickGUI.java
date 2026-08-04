@@ -47,6 +47,8 @@ public final class DropdownClickGUI extends Screen {
 
         displayingBinds = PlayerUtility.isKeyPressed(GLFW.GLFW_KEY_TAB);
 
+        final boolean allowDrag = OpalClient.getInstance().getModuleRepository().getModule(ClickGUIModule.class).isAllowDrag();
+
         final int categoryAmount = categoryPanelList.size();
         for (int i = 0; i < categoryAmount; i++) {
             final CategoryPanel panel = categoryPanelList.get(i);
@@ -61,7 +63,10 @@ public final class DropdownClickGUI extends Screen {
             final float startX = (mc.getWindow().getScaledWidth() - totalWidth) / 2;
             final float x = startX + i * (width + spacing);
 
-            panel.setDimensions(x, y, width, height);
+            panel.setBasePosition(x, y);
+            panel.setDraggingAllowed(allowDrag);
+            panel.setDimensions(x + panel.getDragOffsetX(), y + panel.getDragOffsetY(), width, height);
+
             panel.render(context, mouseX, mouseY, delta);
         }
 
@@ -72,6 +77,8 @@ public final class DropdownClickGUI extends Screen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        final boolean allowDrag = OpalClient.getInstance().getModuleRepository().getModule(ClickGUIModule.class).isAllowDrag();
+        categoryPanelList.forEach(categoryPanel -> categoryPanel.setDraggingAllowed(allowDrag));
         categoryPanelList.forEach(categoryPanel -> categoryPanel.mouseClicked(click.x(), click.y(), click.button()));
 
         return true;
